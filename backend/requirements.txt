@@ -1,0 +1,7 @@
+anthropic
+chromadb
+fastapi
+python-dotenv
+pydantic
+sentence-transformers
+uvicorn
