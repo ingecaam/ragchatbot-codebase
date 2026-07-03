@@ -27,7 +27,7 @@ class CourseSearchTool(Tool):
     def get_tool_definition(self) -> Dict[str, Any]:
         """Return Anthropic tool definition for this tool"""
         return {
-            "name": "search_course_content",
+            "name": "course_lookup",
             "description": "Search course materials with smart course name matching and lesson filtering",
             "input_schema": {
                 "type": "object",
@@ -89,28 +89,34 @@ class CourseSearchTool(Tool):
         """Format search results with course and lesson context"""
         formatted = []
         sources = []  # Track sources for the UI
-        
+        # Agrupa por curso para evitar duplicados
+        courses_seen = {}
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
-            
-            # Build context header
-            header = f"[{course_title}"
+            if course_title not in courses_seen:
+                courses_seen[course_title] = {'lessons': set(), 'docs': []}
             if lesson_num is not None:
-                header += f" - Lesson {lesson_num}"
-            header += "]"
+                courses_seen[course_title]['lessons'].add(lesson_num)
+                sources.append(f"{course_title} - Lesson {lesson_num}")
+            else:
+                sources.append(course_title)
             
-            # Track source for the UI
-            source = course_title
-            if lesson_num is not None:
-                source += f" - Lesson {lesson_num}"
-            sources.append(source)
-            
-            formatted.append(f"{header}\n{doc}")
-        
+            # # ← Trunca el documento a 300 caracteres
+            snippet = doc[:300].strip()
+            if len(doc) > 300:
+                snippet += "..."
+            courses_seen[course_title]['docs'].append(snippet)
+
         # Store sources for retrieval
         self.last_sources = sources
-        
+        for course_title, data in courses_seen.items():
+            line = f"Course: {course_title}."
+            if data['lessons']:
+                lessons_str = ", ".join([f"Lesson {l}" for l in sorted(data['lessons'])])
+                line += f" Found content in: {lessons_str}."
+            docs_str = "\n".join(data['docs'])
+            formatted.append(f"{line}\n")
         return "\n\n".join(formatted)
 
 class ToolManager:

@@ -1,3 +1,5 @@
+import json
+
 import anthropic
 from typing import List, Optional, Dict, Any
 
@@ -77,8 +79,21 @@ Provide only the direct answer to what was asked.
             api_params["tool_choice"] = {"type": "auto"}
         
         # Get response from Claude
-        response = self.client.messages.create(**api_params)
-        
+        try:
+            response = self.client.messages.create(**api_params)
+        except anthropic.APIConnectionError as e:
+            print(f"Connection error: {e}")
+            raise
+        except anthropic.RateLimitError as e:
+            print(f"Rate limit error: {e}")
+            raise
+        except anthropic.APIStatusError as e:
+            print(f"API error - Status: {e.status_code}, Message: {e.message}")
+            print(f"Full response: {e.response}")
+            raise
+        except Exception as e:
+            print(f"Unexpected error: {type(e).__name__}: {e}")
+            raise
         # Handle tool execution if needed
         if response.stop_reason == "tool_use" and tool_manager:
             return self._handle_tool_execution(response, api_params, tool_manager)
@@ -100,9 +115,23 @@ Provide only the direct answer to what was asked.
         """
         # Start with existing messages
         messages = base_params["messages"].copy()
-        
+        # Serialize assistant content to plain dicts (avoid Pydantic objects)
+        assistant_content = []
+        for block in initial_response.content:
+            if block.type == "tool_use":
+                assistant_content.append({
+                    "type": "tool_use",
+                    "id": block.id,
+                    "name": block.name,
+                    "input": block.input
+                })
+            elif block.type == "text":
+                assistant_content.append({
+                    "type": "text",
+                    "text": block.text
+                })
         # Add AI's tool use response
-        messages.append({"role": "assistant", "content": initial_response.content})
+        messages.append({"role": "assistant", "content": assistant_content})
         
         # Execute all tool calls and collect results
         tool_results = []
@@ -112,7 +141,7 @@ Provide only the direct answer to what was asked.
                     content_block.name, 
                     **content_block.input
                 )
-                
+
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": content_block.id,
@@ -122,14 +151,16 @@ Provide only the direct answer to what was asked.
         # Add tool results as single message
         if tool_results:
             messages.append({"role": "user", "content": tool_results})
-        
         # Prepare final API call without tools
         final_params = {
             **self.base_params,
             "messages": messages,
             "system": base_params["system"]
         }
-        
         # Get final response
         final_response = self.client.messages.create(**final_params)
+
+        if not final_response.content:
+            raise ValueError(f"Empty response from API. Stop reason: {final_response.stop_reason}")
+    
         return final_response.content[0].text
