@@ -89,7 +89,7 @@ class CourseSearchTool(Tool):
         """Format search results with course and lesson context"""
         formatted = []
         sources = []  # Track sources for the UI
-        # Agrupa por curso para evitar duplicados
+        seen_sources = set()  # Deduplicate by (course_title, lesson_num)
         courses_seen = {}
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
@@ -98,11 +98,18 @@ class CourseSearchTool(Tool):
                 courses_seen[course_title] = {'lessons': set(), 'docs': []}
             if lesson_num is not None:
                 courses_seen[course_title]['lessons'].add(lesson_num)
-                sources.append(f"{course_title} - Lesson {lesson_num}")
+                key = (course_title, lesson_num)
+                if key not in seen_sources:
+                    seen_sources.add(key)
+                    url = self.store.get_lesson_link(course_title, lesson_num)
+                    sources.append({"label": f"{course_title} - Lesson {lesson_num}", "url": url})
             else:
-                sources.append(course_title)
-            
-            # # ← Trunca el documento a 300 caracteres
+                key = (course_title, None)
+                if key not in seen_sources:
+                    seen_sources.add(key)
+                    url = self.store.get_course_link(course_title)
+                    sources.append({"label": course_title, "url": url})
+
             snippet = doc[:300].strip()
             if len(doc) > 300:
                 snippet += "..."
@@ -118,6 +125,48 @@ class CourseSearchTool(Tool):
             docs_str = "\n".join(data['docs'])
             formatted.append(f"{line}\n")
         return "\n\n".join(formatted)
+
+class CourseOutlineTool(Tool):
+    """Tool for retrieving a course's complete lesson outline."""
+
+    def __init__(self, vector_store: VectorStore):
+        self.store = vector_store
+        self.last_sources = []
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        return {
+            "name": "course_outline",
+            "description": "Get the complete outline of a course: title, course link, and full lesson list with numbers and titles",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "course_name": {
+                        "type": "string",
+                        "description": "Course title to look up (partial matches work, e.g. 'MCP', 'Introduction')"
+                    }
+                },
+                "required": ["course_name"]
+            }
+        }
+
+    def execute(self, course_name: str) -> str:
+        outline = self.store.get_course_outline(course_name)
+        if not outline:
+            return f"No course found matching '{course_name}'."
+
+        url = outline.get('course_link')
+        self.last_sources = [{"label": outline['title'], "url": url}] if url else []
+
+        lines = [
+            f"Course: {outline['title']}",
+            f"Course Link: {url or 'N/A'}",
+            "",
+            "Lessons:"
+        ]
+        for lesson in outline['lessons']:
+            lines.append(f"  Lesson {lesson['lesson_number']}: {lesson['lesson_title']}")
+        return "\n".join(lines)
+
 
 class ToolManager:
     """Manages available tools for the AI"""
