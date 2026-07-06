@@ -3,6 +3,7 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch
 import chromadb
+from fastapi.testclient import TestClient
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BACKEND_DIR not in sys.path:
@@ -67,3 +68,35 @@ def seeded_store():
         ]
         store.add_course_content(chunks)
         yield store
+
+
+@pytest.fixture
+def mock_rag():
+    """Pre-configured MagicMock that stands in for RAGSystem in API tests."""
+    m = MagicMock()
+    m.session_manager.create_session.return_value = "test-session-abc"
+    m.session_manager.sessions = {}
+    m.query.return_value = ("Test answer.", [])
+    m.get_course_analytics.return_value = {
+        "total_courses": 2,
+        "course_titles": ["Course A", "Course B"],
+    }
+    m.add_course_folder.return_value = (0, 0)
+    return m
+
+
+@pytest.fixture
+def api_client(mock_rag):
+    """TestClient wired to the real FastAPI app with RAGSystem and StaticFiles mocked.
+
+    Pops the cached `app` module so module-level initialisation (RAGSystem
+    instantiation and StaticFiles mount) reruns under our patches each time.
+    """
+    sys.modules.pop("app", None)
+    with (
+        patch("rag_system.RAGSystem", return_value=mock_rag),
+        patch("fastapi.staticfiles.StaticFiles"),
+    ):
+        import app as _app_module  # noqa: PLC0415
+        yield TestClient(_app_module.app)
+    sys.modules.pop("app", None)
