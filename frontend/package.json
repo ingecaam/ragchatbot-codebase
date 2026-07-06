@@ -1,0 +1,13 @@
+{
+  "name": "course-materials-assistant-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for Course Materials Assistant chatbot",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "quality": "npm run format:check"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}
