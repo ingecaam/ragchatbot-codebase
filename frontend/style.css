@@ -862,7 +862,8 @@ details[open] .suggested-header::before {
     background-color 0.2s ease,
     border-color 0.2s ease,
     color 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    transform 0.1s ease;
   padding: 0;
 }
 
@@ -874,11 +875,14 @@ details[open] .suggested-header::before {
 
 .theme-toggle:focus {
   outline: none;
-  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .theme-toggle:focus-visible {
   box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.theme-toggle:active {
+  transform: scale(0.9);
 }
 
 .theme-toggle svg {

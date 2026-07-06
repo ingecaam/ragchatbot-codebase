@@ -32,7 +32,26 @@ A fixed-position dark/light mode toggle button in the top-right corner of the vi
 - Clicking the toggle switches between dark and light mode with a 250ms smooth cross-fade on colors.
 - The icon rotates and fades: sun → moon when switching to light, moon → sun when switching to dark.
 - The chosen theme persists across page reloads via `localStorage`.
-- The button is keyboard-navigable (focusable, visible focus ring) and has an `aria-label` for screen readers.
+- The button is keyboard-navigable (focusable, visible focus ring) and has a dynamic `aria-label` for screen readers.
+
+---
+
+## Toggle Button Accessibility & Interaction Polish
+
+### What was improved
+
+Polished the `#themeToggle` button to fully meet the accessible, keyboard-navigable design spec.
+
+### Files modified
+
+#### `script.js`
+- `setupThemeToggle()` now calls `updateToggleLabel(theme)` on both initial load and every toggle.
+- `aria-label` updates dynamically: **"Switch to light mode"** when dark is active, **"Switch to dark mode"** when light is active — so screen readers announce the action, not just "toggle".
+
+#### `style.css`
+- Separated `:focus` (just `outline: none` to suppress browser default) from `:focus-visible` (shows the blue focus ring). Mouse clicks no longer show the focus ring; keyboard Tab still does.
+- Added `:active { transform: scale(0.9) }` for tactile press feedback.
+- Added `transform 0.1s ease` to the button's `transition` so the scale-down animates smoothly.
 
 ---
 

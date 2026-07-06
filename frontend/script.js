@@ -24,6 +24,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupThemeToggle() {
   const toggle = document.getElementById('themeToggle');
+
+  function updateToggleLabel(theme) {
+    toggle.setAttribute(
+      'aria-label',
+      theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+    );
+  }
+
+  const initial = document.documentElement.getAttribute('data-theme') || 'dark';
+  updateToggleLabel(initial);
+
   toggle.addEventListener('click', () => {
     const current =
       document.documentElement.getAttribute('data-theme') || 'dark';
@@ -31,6 +42,7 @@ function setupThemeToggle() {
     document.documentElement.classList.add('theme-transitioning');
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
+    updateToggleLabel(next);
     setTimeout(
       () => document.documentElement.classList.remove('theme-transitioning'),
       300
