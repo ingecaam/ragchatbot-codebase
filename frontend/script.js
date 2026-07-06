@@ -170,6 +170,13 @@ function addMessage(content, type, sources = null, isWelcome = false) {
   }
 
   messageDiv.innerHTML = html;
+
+  // Ensure links inside assistant messages (e.g. course links) open in a new tab
+  messageDiv.querySelectorAll('.message-content a').forEach((link) => {
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+  });
+
   chatMessages.appendChild(messageDiv);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 

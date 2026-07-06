@@ -360,6 +360,41 @@ header h1 {
   white-space: nowrap;
 }
 
+/* Links inside assistant messages (e.g. course links) */
+.message-content a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.65rem;
+  background: var(--surface-hover);
+  color: var(--source-link-color);
+  border: 1px solid var(--source-link-border);
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.message-content a::after {
+  content: '↗';
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.message-content a:hover {
+  background: var(--source-link-hover-bg);
+  color: var(--source-link-hover-color);
+  border-color: var(--source-link-hover-border);
+}
+
+.message-content a:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
 /* Markdown formatting styles */
 .message-content h1,
 .message-content h2,
